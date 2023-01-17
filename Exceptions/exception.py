@@ -15,3 +15,9 @@ class NoListenPort(ArgParseError):
 class NoListenIp(ArgParseError):
     def __str__(self) -> str:
         return 'No IP address to listen for connections'
+
+
+class NetworkParseError(Exception):
+    pass
+
+

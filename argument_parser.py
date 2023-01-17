@@ -2,7 +2,7 @@ import argparse
 import Exceptions.exception as Exs
 
 
-def add_args(parser):
+def add_args(parser: argparse.ArgumentParser) -> None:
 
     parser.add_argument('--ti', '--targetip', dest='target_ip',
                         help='IP address of the scanned target')
@@ -14,7 +14,7 @@ def add_args(parser):
                         help='Port to listen for connections')
 
 
-def check_args(args):
+def check_args(args: argparse.Namespace) -> bool:
     if args.target_ip is None:
         raise Exs.ArgParseError('Target ip address is missing')
     elif args.listen_ip is None:
@@ -25,13 +25,14 @@ def check_args(args):
         return True
 
 
-def get_args():
+def get_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='This application is designed ' +
                                                  'to configure a distributed ' +
                                                  'scanning system.')
-
     add_args(parser)
     parser.print_help()
     args = parser.parse_args()
     if check_args(args):
         return args
+    else:
+        raise Exs.ArgParseError('Some problem with module argparse.')

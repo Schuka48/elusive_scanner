@@ -109,6 +109,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+myenv/
 
 # Spyder project settings
 .spyderproject
@@ -129,6 +130,7 @@ dmypy.json
 .pyre/
 
 # Visual Studio Code # 
+./vscode/
 .vscode/* 
 !.vscode/settings.json 
 !.vscode/tasks.json 

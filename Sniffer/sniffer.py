@@ -1,10 +1,9 @@
 from art import tprint
-import protocol
+from . import protocol
 
 
 def start_sniffer():
-    proto = protocol.NetworkProtocol('test')
-    print(proto)
+    eth_frame = protocol.Ethernet(b'test')
 
 
 if __name__ == '__main__':

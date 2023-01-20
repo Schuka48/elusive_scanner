@@ -23,14 +23,11 @@ class NetworkProtocol:
         self.data_length = len(self.raw_data)
 
     def get_proto_info(self) -> str:
-        raise Exs.NetworkParseError('Override function: %s in class:%s' % (self.get_proto_info.__name__,
+        raise Exs.NetworkParseError('Override function: %s in class: %s' % (self.get_proto_info.__name__,
                                                                            self.__class__.__name__))
 
     def __str__(self) -> str:
         return self.get_proto_info()
-
-    def parse_data(self) -> None:
-        raise Exs.NetworkParseError('Override parse_data function')
 
     @staticmethod
     def get_format_address(raw_addr: bytes, *, sep: str = '', function: Callable = str.upper) -> str:
@@ -42,19 +39,6 @@ class NetworkProtocol:
         else:
             raise Exs.NetworkParseError('No raw data in %s object' % self.__class__.__name__)
 
-
-class Ethernet(NetworkProtocol):
-    """
-    Layer 2 protocol implementation of the OSI model.
-    This class allows you to define Ethernet frame fields and save them in different formats.
-    """
-    def __init__(self, raw_data: bytes):
-        NetworkProtocol.__init__(self, raw_data)
-        self.level: NetworkLevel = NetworkLevel.DATALINK
-        self.parse_data()
-
-    def parse_data(self) -> None:
-        pass
 
 
 class IP(NetworkProtocol):

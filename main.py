@@ -1,9 +1,10 @@
 import sys
 
 from art import tprint
-from argument_parser import get_args
+
 import Exceptions.exception as Exs
 import Sniffer.sniffer as sniffer
+from argument_parser import get_args
 
 
 def main():

@@ -1,7 +1,8 @@
-from .protocol import NetworkProtocol, NetworkLevel
-
-import struct
 import socket
+import struct
+
+from .protocol import NetworkLevel, NetworkProtocol
+
 
 class Ethernet(NetworkProtocol):
     """
@@ -25,4 +26,5 @@ class Ethernet(NetworkProtocol):
     
     def get_proto_info(self) -> str:
         return '' # TODO: realize function get_proto_info
+
         

@@ -1,6 +1,7 @@
-from typing import Callable
-import Exceptions.exception as Exs
 from enum import Enum
+from typing import Callable
+
+import Exceptions.exception as Exs
 
 
 class NetworkLevel(Enum):

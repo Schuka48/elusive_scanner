@@ -14,9 +14,12 @@ class IPPacket(NetworkProtocol):
 
     def __parse_data(self) -> None:
         if self.data_length:
-            ip_header = struct.unpack('!BBHHHBBH4s4s', self.raw_data[:20])
+            try:
+                ip_header = struct.unpack('!BBHHHBBH4s4s', self.raw_data[:20])
+            except struct.error:
+                raise Exs.IPPacketParseError('Incorrect IP packet format')
         else:
-            raise Exs.EthernetFrameParseError("Can't parse IP header.")
+            raise Exs.IPPacketParseError("No {self.__class__.__name__} header")
         
         self.__version = ip_header[0] >> 4
         self.__hLen = ip_header[0] & 0xF

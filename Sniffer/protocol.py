@@ -40,6 +40,9 @@ class NetworkProtocol:
         else:
             raise Exs.NetworkParseError('No raw data in %s object' % self.__class__.__name__)
 
+    def get_json_proto_header(self):
+        raise NotImplementedError('Override function')
+
 
 class ARP(NetworkProtocol):
     pass

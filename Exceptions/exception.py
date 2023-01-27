@@ -26,4 +26,5 @@ class EthernetFrameParseError(NetworkParseError):
 class IPPacketParseError(NetworkParseError):
     pass
 
-
+class TCPPacketParseError(NetworkParseError):
+    pass

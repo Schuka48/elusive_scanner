@@ -19,9 +19,12 @@ class EthernetFrame(NetworkProtocol):
 
     def __parse_data(self) -> None:
         if self.data_length:
-            dst_mac, src_mac, proto = struct.unpack('!6s6sH', self.raw_data[:14])
+            try:
+                dst_mac, src_mac, proto = struct.unpack('!6s6sH', self.raw_data[:14])
+            except struct.error:
+                raise Exs.EthernetFrameParseError("Incorrect Ethernet frame format")
         else:
-            raise Exs.IPPacketParseError("Can't Parse Ethernet header.")
+            raise Exs.EthernetFrameParseError(f"No {self.__class__.__name__} header")
 
         self.dst_mac = self.get_format_address(dst_mac, sep=':', function="{:02x}".format).upper()
         self.src_mac = self.get_format_address(src_mac, sep=':', function="{:02x}".format).upper()

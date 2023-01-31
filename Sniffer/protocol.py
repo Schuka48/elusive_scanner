@@ -47,11 +47,6 @@ class NetworkProtocol:
 class ARP(NetworkProtocol):
     pass
 
-
-class TCP(NetworkProtocol):
-    pass
-
-
 class UDP(NetworkProtocol):
     pass
 

@@ -21,14 +21,15 @@ class EthernetFrame(NetworkProtocol):
         if self.data_length:
             try:
                 dst_mac, src_mac, proto = struct.unpack('!6s6sH', self.raw_data[:14])
+                self.dst_mac = self.get_format_address(dst_mac, sep=':', function="{:02x}".format).upper()
+                self.src_mac = self.get_format_address(src_mac, sep=':', function="{:02x}".format).upper()
+                self.encapsulated_proto = socket.ntohs(proto)
             except struct.error:
                 raise Exs.EthernetFrameParseError("Incorrect Ethernet frame format")
         else:
             raise Exs.EthernetFrameParseError(f"No {self.__class__.__name__} header")
 
-        self.dst_mac = self.get_format_address(dst_mac, sep=':', function="{:02x}".format).upper()
-        self.src_mac = self.get_format_address(src_mac, sep=':', function="{:02x}".format).upper()
-        self.encapsulated_proto = socket.ntohs(proto)
+        
 
     def get_encapsulated_data(self) -> bytes:
         return NetworkProtocol.get_data(self, self.__offset)

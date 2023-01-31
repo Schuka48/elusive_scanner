@@ -16,23 +16,24 @@ class IPPacket(NetworkProtocol):
         if self.data_length:
             try:
                 ip_header = struct.unpack('!BBHHHBBH4s4s', self.raw_data[:20])
+                self.__version = ip_header[0] >> 4
+                self.__hLen = ip_header[0] & 0xF
+                self.__header_len = self.__hLen * 4
+                self.__tos = ip_header[1]
+                self.__total_len = ip_header[2]
+                self.__unique_id = ip_header[3]
+                self.__offset_flags = ip_header[4]
+                self.__ttl = ip_header[5]
+                self.__proto = ip_header[6]  
+                self.__checksum = ip_header[7]
+                self.__src_addr = self.get_format_address(ip_header[8], sep='.', function=str)
+                self.__dst_addr = self.get_format_address(ip_header[9], sep='.', function=str)
             except struct.error:
                 raise Exs.IPPacketParseError('Incorrect IP packet format')
         else:
             raise Exs.IPPacketParseError("No {self.__class__.__name__} header")
         
-        self.__version = ip_header[0] >> 4
-        self.__hLen = ip_header[0] & 0xF
-        self.__header_len = self.__hLen * 4
-        self.__tos = ip_header[1]
-        self.__total_len = ip_header[2]
-        self.__unique_id = ip_header[3]
-        self.__offset_flags = ip_header[4]
-        self.__ttl = ip_header[5]
-        self.__proto = ip_header[6]  
-        self.__checksum = ip_header[7]
-        self.__src_addr = self.get_format_address(ip_header[8], sep='.', function=str)
-        self.__dst_addr = self.get_format_address(ip_header[9], sep='.', function=str)
+        
 
     def get_encapsulated_data(self) -> bytes:
         return NetworkProtocol.get_data(self, self.__offset)

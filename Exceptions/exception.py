@@ -28,3 +28,6 @@ class IPPacketParseError(NetworkParseError):
 
 class TCPPacketParseError(NetworkParseError):
     pass
+
+class UDPPacketParseError(NetworkParseError):
+    pass

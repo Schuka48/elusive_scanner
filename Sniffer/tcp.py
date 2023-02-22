@@ -4,6 +4,7 @@ import Exceptions.exception as Exs
 
 from .protocol import NetworkLevel, NetworkProtocol
 
+
 class TCPProtocol(NetworkProtocol):
     def __init__(self, raw_data: bytes):
         NetworkProtocol.__init__(self, raw_data)
@@ -45,11 +46,8 @@ class TCPProtocol(NetworkProtocol):
         else:
             raise Exs.TCPPacketParseError('No {self.__class__.__name__} header')
 
-        
-
     def get_encapsulated_data(self) -> bytes:
         return NetworkProtocol.get_data(self, self.__offset)
-    
+
     def get_proto_info(self) -> str:
-        return '' # TODO: realize function, that return pretty view about network protocol
-        
+        return ''  # TODO: realize function, that return pretty view about network protocol

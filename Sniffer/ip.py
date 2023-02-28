@@ -3,39 +3,24 @@ import struct
 import Exceptions.exception as Exs
 
 from .protocol import NetworkLevel, NetworkProtocol
+from .ethernet import EthernetFrameHeader
 
 
-class IPPacket(NetworkProtocol):
-    def __init__(self, raw_data: bytes, parent=None):
-        NetworkProtocol.__init__(self, raw_data)
-        self.__level: NetworkLevel = NetworkLevel.NETWORK
-        self.__parse_data()
-        self.__offset = self.__header_len
-        self.__child = None
-        self.__parent = parent
+class IPPacketHeader:
+    def __init__(self, ip_header: tuple):
+        self.__version = ip_header[0] >> 4
+        self.__hLen = ip_header[0] & 0xF
+        self.__header_len = self.__hLen * 4
+        self.__tos = ip_header[1]
+        self.__total_len = ip_header[2]
+        self.__unique_id = ip_header[3]
+        self.__offset_flags = ip_header[4]
+        self.__ttl = ip_header[5]
+        self.__proto = ip_header[6]
+        self.__checksum = ip_header[7]
+        self.__src_addr = NetworkProtocol.get_format_address(ip_header[8], sep='.', function=str)
+        self.__dst_addr = NetworkProtocol.get_format_address(ip_header[9], sep='.', function=str)
 
-    def __parse_data(self) -> None:
-        if self.data_length:
-            try:
-                ip_header = struct.unpack('!BBHHHBBH4s4s', self.raw_data[:20])
-                self.__version = ip_header[0] >> 4
-                self.__hLen = ip_header[0] & 0xF
-                self.__header_len = self.__hLen * 4
-                self.__tos = ip_header[1]
-                self.__total_len = ip_header[2]
-                self.__unique_id = ip_header[3]
-                self.__offset_flags = ip_header[4]
-                self.__ttl = ip_header[5]
-                self.__proto = ip_header[6]  
-                self.__checksum = ip_header[7]
-                self.__src_addr = self.get_format_address(ip_header[8], sep='.', function=str)
-                self.__dst_addr = self.get_format_address(ip_header[9], sep='.', function=str)
-                self.__header = ip_header
-            except struct.error:
-                raise Exs.IPPacketParseError('Incorrect IP packet format')
-        else:
-            raise Exs.IPPacketParseError("No {self.__class__.__name__} header")
-        
     @property
     def source_address(self):
         return self.__src_addr
@@ -45,12 +30,48 @@ class IPPacket(NetworkProtocol):
         return self.__dst_addr
 
     @property
-    def header(self):
-        return self.__header
+    def header_length(self):
+        return self.__header_len
 
     @property
     def protocol(self):
         return self.__proto
+
+
+class IPPacket(NetworkProtocol):
+    def __init__(self, raw_data: bytes, parent: EthernetFrameHeader = None):
+        NetworkProtocol.__init__(self, raw_data)
+        self.__level: NetworkLevel = NetworkLevel.NETWORK
+        self.__header = self.__parse_data()
+        self.__offset = self.__header.header_length
+        self.__child = None
+        self.__parent = parent
+
+    def __parse_data(self) -> IPPacketHeader:
+        if self.data_length:
+            try:
+                ip_header = struct.unpack('!BBHHHBBH4s4s', self.raw_data[:20])
+                return IPPacketHeader(ip_header)
+            except struct.error:
+                raise Exs.IPPacketParseError('Incorrect IP packet format')
+        else:
+            raise Exs.IPPacketParseError("No {self.__class__.__name__} header")
+
+    @property
+    def header(self):
+        return self.__header
+
+    @property
+    def source_address(self):
+        return self.__header.source_address
+
+    @property
+    def destination_address(self):
+        return self.__header.destination_address
+
+    @property
+    def protocol(self):
+        return self.__header.protocol
 
     def get_encapsulated_data(self) -> bytes:
         return NetworkProtocol.get_data(self, self.__offset)
@@ -62,5 +83,10 @@ class IPPacket(NetworkProtocol):
         result += f'TTL: {self.__ttl}\tSrc: {self.__src_addr}\tDst: {self.__dst_addr}\n'
         return result
 
-    def set_parent(self, parent) -> None:
-        pass
+    def set_parent(self, parent: EthernetFrameHeader) -> None:
+        self.__parent = parent
+
+    def set_child(self, child) -> None:
+        self.__child = child
+
+

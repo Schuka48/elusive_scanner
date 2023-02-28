@@ -23,8 +23,7 @@ def start_sniffer():
         if filtrate_eth_frame(ethernet):
             if ethernet.encapsulated_proto == 8:
 
-                ip = IPPacket(ethernet.get_encapsulated_data())
-                ip.set_parent(ethernet.header)
+                ip = IPPacket(ethernet.get_encapsulated_data(), ethernet.header)
                 if ip.protocol == 6:
                     tcp = TCPProtocol(ip.get_encapsulated_data())
         else:

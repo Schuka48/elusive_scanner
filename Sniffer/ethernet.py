@@ -22,7 +22,7 @@ class EthernetFrameHeader:
 
     @property
     def encapsulated_proto(self) -> int:
-        return self.__encapsulated_proto
+        return socket.ntohs(self.__encapsulated_proto)
 
     @property
     def src_mac(self) -> bytes:
@@ -42,37 +42,34 @@ class EthernetFrame(NetworkProtocol):
     def __init__(self, raw_data: bytes):
         NetworkProtocol.__init__(self, raw_data)
         self.__level: NetworkLevel = NetworkLevel.DATALINK
-        self.__parse_data()
+        self.__header = self.__parse_data()
         self.__offset: int = 14
 
-    def __parse_data(self) -> None:
+    def __parse_data(self) -> EthernetFrameHeader:
         if self.data_length:
             try:
                 dst_mac, src_mac, proto = struct.unpack('!6s6sH', self.raw_data[:14])
-                self.__dst_mac = self.get_format_address(dst_mac, sep=':', function="{:02x}".format).upper()
-                self.__src_mac = self.get_format_address(src_mac, sep=':', function="{:02x}".format).upper()
-                self.__encapsulated_proto = socket.ntohs(proto)
-                self.__header = EthernetFrameHeader(src_mac, dst_mac, socket.ntohs(proto))
+                return EthernetFrameHeader(src_mac, dst_mac, proto)
             except struct.error:
                 raise Exs.EthernetFrameParseError("Incorrect Ethernet frame format")
         else:
             raise Exs.EthernetFrameParseError(f"No {self.__class__.__name__} header")
 
     @property
-    def dst_mac(self) -> str:
-        return self.__dst_mac
+    def header(self) -> EthernetFrameHeader:
+        return self.__header
 
     @property
-    def src_mac(self) -> str:
-        return self.__src_mac
+    def src_mac(self) -> bytes:
+        return self.__header.src_mac
+
+    @property
+    def dst_mac(self) -> bytes:
+        return self.__header.dst_mac
 
     @property
     def encapsulated_proto(self) -> int:
-        return self.__encapsulated_proto
-
-    @property
-    def header(self) -> EthernetFrameHeader:
-        return self.__header
+        return self.__header.encapsulated_proto
 
     def get_encapsulated_data(self) -> bytes:
         return NetworkProtocol.get_data(self, self.__offset)

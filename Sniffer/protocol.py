@@ -14,6 +14,13 @@ class NetworkLevel(Enum):
     APPLICATION = 'Application layer'
 
 
+# TODO: Implement Parent-Child relationship in the OSI model.
+
+# class ProtocolLayer():
+#    """Protocol Layer Manager for insertion and removal of protocol layers."""
+#   __child = None
+#   __parent = None
+
 class NetworkProtocol:
     """
     This class is an abstract class for inheritance.

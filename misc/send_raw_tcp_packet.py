@@ -3,25 +3,19 @@ import socket
 import sys
 import time
 from struct import *
+import array
 
 
 # checksum functions needed for calculation checksum
-def checksum(msg):
-    s = 0
+def chksum(packet):
+    if len(packet) % 2 != 0:
+        packet += b'\0'
 
-    # loop taking 2 characters at a time
-    for i in range(0, len(msg), 2):
-        w = ord(msg[i]) + (ord(msg[i + 1]) << 8)
-        s = s + w
+    res = sum(array.array("H", packet))
+    res = (res >> 16) + (res & 0xffff)
+    res += res >> 16
 
-    s = (s >> 16) + (s & 0xffff)
-    s = s + (s >> 16)
-
-    # complement and mask to 4 byte short
-    s = ~s & 0xffff
-
-    return s
-
+    return (~res) & 0xffff
 
 # the main function
 def main():
@@ -39,8 +33,8 @@ def main():
     # now start constructing the packet
     packet = ''
 
-    source_ip = '1.2.3.4'
-    dest_ip = '192.168.1.1'  # or socket.gethostbyname('www.google.com')
+    source_ip = '10.33.80.55'
+    dest_ip = '10.0.0.1'  # or socket.gethostbyname('www.google.com')
 
     # ip header fields
     ip_ihl = 5
@@ -62,7 +56,7 @@ def main():
                      ip_saddr, ip_daddr)
 
     # tcp header fields
-    tcp_source = 1234  # source port
+    tcp_source = 49524  # source port
     tcp_dest = 80  # destination port
     tcp_seq = 454
     tcp_ack_seq = 0
@@ -99,7 +93,7 @@ def main():
     psh = pack('!4s4sBBH', source_address, dest_address, placeholder, protocol, tcp_length)
     psh = psh + tcp_header + user_data
 
-    tcp_check = checksum(psh)
+    tcp_check = chksum(psh)
     # print tcp_checksum
 
     print('TCP Checksum:', tcp_check)
@@ -112,7 +106,7 @@ def main():
     packet = ip_header + tcp_header + user_data
 
     # increase count to send more packets
-    count = 3
+    count = 1
 
     for i in range(count):
         print('sending packet...')

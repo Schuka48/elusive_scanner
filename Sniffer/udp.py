@@ -1,11 +1,17 @@
 import struct
+import socket
+import  array
+
 import Exceptions.exception as Exs
 
 
 from .protocol import NetworkProtocol, NetworkLevel
+from .ip import IPPacketHeader
 
 
 class UDPHeader:
+    __level: NetworkLevel = NetworkLevel.TRANSPORT
+
     def __init__(self, header: tuple):
         self.__src_port = header[0]
         self.__dst_port = header[1]
@@ -26,22 +32,29 @@ class UDPHeader:
         return self.__length
 
     @property
-    def chk_sum(self):
+    def checksum(self):
         return self.__chk_sum
 
     @property
     def offset(self):
         return self.__offset
 
+    def build_header(self, checksum=0) -> bytes:
+        header = struct.pack('!HHH', self.source_port, self.destination_port, self.length) + struct.pack('H', checksum)
+        return header
+
     def __str__(self) -> str:
-        return f''
+        result = f'{self.__level.value}\tUDP:\n'
+        result += f'Src Port: {self.source_port}\tDst Port: {self.destination_port}\n Checksum: {self.checksum}\n'
+        return result
 
 
 class UDPPacket(NetworkProtocol):
-    def __init__(self, raw_data: bytes):
+    def __init__(self, raw_data: bytes, parent: IPPacketHeader = None):
         NetworkProtocol.__init__(self, raw_data)
         self.__level: NetworkLevel = NetworkLevel.TRANSPORT
         self.__header = self.__parse()
+        self.__parent: IPPacketHeader = parent
 
     def __parse(self) -> UDPHeader:
         if self.data_length:
@@ -68,6 +81,31 @@ class UDPPacket(NetworkProtocol):
     @property
     def length(self) -> int:
         return self.__header.length
+
+    @property
+    def pseudo_header(self) -> bytes:
+        if self.__parent is not None:
+            return struct.pack(
+                '!4s4sHH', socket.inet_aton(self.__parent.source_address),
+                socket.inet_aton(self.__parent.destination_address),
+                socket.IPPROTO_UDP, self.data_length
+            )
+        else:
+            raise Exs.TCPPacketParseError('No parent')
+
+    def checksum(self) -> int:
+        packet = self.pseudo_header + self.__header.build_header(checksum=0) + self.get_encapsulated_data()
+        if len(packet) % 2 != 0:
+            packet += b'\0'
+
+        res = sum(array.array("H", packet))
+        res = (res >> 16) + (res & 0xffff)
+        res += res >> 16
+
+        return (~res) & 0xffff
+
+    def get_tcp_packet(self) -> bytes:
+        return self.__header.build_header(checksum=self.checksum()) + self.get_encapsulated_data()
 
     def get_encapsulated_data(self) -> bytes:
         return NetworkProtocol.get_data(self, self.__header.offset)

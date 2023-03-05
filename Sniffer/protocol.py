@@ -41,9 +41,9 @@ class NetworkProtocol:
     def get_format_address(raw_addr: bytes, *, sep: str = '', function: Callable = str.upper) -> str:
         return f'{sep}'.join(map(function, raw_addr))
 
-    def get_data(self, offset: int) -> bytes:
+    def get_data(self, offset: int, total_length: int = None) -> bytes:
         if self.data_length:
-            return self.raw_data[offset:]
+            return self.raw_data[offset:] if total_length is None else self.raw_data[offset:total_length]
         else:
             raise Exs.NetworkParseError('No raw data in %s object' % self.__class__.__name__)
 

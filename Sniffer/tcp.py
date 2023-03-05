@@ -9,7 +9,9 @@ from .ip import IPPacketHeader
 
 
 class TCPHeader:
-    def __init__(self, header: tuple):
+    __level: NetworkLevel = NetworkLevel.TRANSPORT
+
+    def __init__(self, header: tuple, raw_header: bytes = None):
         self.__src_port = header[0]
         self.__dst_port = header[1]
         self.__sequence = header[2]
@@ -34,6 +36,7 @@ class TCPHeader:
         self.__window_size = header[5]
         self.__check_sum = header[6]
         self.__urgent_pointer = header[7]
+        self.__options = None if self.__offset == 20 else raw_header[20:self.__offset]
 
     @property
     def source_port(self) -> int:
@@ -59,10 +62,33 @@ class TCPHeader:
     def checksum(self) -> int:
         return self.__check_sum
 
+    @property
+    def level(self):
+        return self.__level
+
     def build_header(self, checksum=0) -> bytes:
-        header = struct.pack('!HHIIHHHH', self.__src_port, self.__dst_port, self.__sequence, self.__acknowledgment,
-                             self.__offset_reserved_flags, self.__window_size, checksum, self.__urgent_pointer)
+        header = struct.pack('!HHIIHH', self.__src_port, self.__dst_port, self.__sequence, self.__acknowledgment,
+                             self.__offset_reserved_flags, self.__window_size) + \
+                 struct.pack('H', checksum) + struct.pack('!H', self.__urgent_pointer)
+        if self.__options is not None:
+            header += self.__options
         return header
+
+    def get_raw_header(self):
+        header = struct.pack('!HHIIHHHH', self.__src_port, self.__dst_port, self.__sequence, self.__acknowledgment,
+                             self.__offset_reserved_flags, self.__window_size, self.__check_sum, self.__urgent_pointer)
+        if self.__options is not None:
+            header += self.__options
+        return header
+
+    def __str__(self) -> str:
+        result = f'{self.__level.value}\tTCP:\n'
+        result += f'Src port: {self.source_port}\tDst port: {self.destination_port}\tChecksum: {hex(self.checksum)}\n'
+        result += 'Flags:\n'
+        flags = [f'{flag}' for flag in self.__flags.keys() if self.__flags[flag] != 0]
+        for flag in flags:
+            result += f'{flag}\n'
+        return result
 
 
 class TCPPacket(NetworkProtocol):
@@ -77,7 +103,7 @@ class TCPPacket(NetworkProtocol):
         if self.data_length:
             try:
                 header = struct.unpack('!HHIIHHHH', self.raw_data[:20])
-                return TCPHeader(header)
+                return TCPHeader(header, self.raw_data)
             except struct.error:
                 raise Exs.TCPPacketParseError('Incorrect TCP packet format')
         else:
@@ -101,12 +127,6 @@ class TCPPacket(NetworkProtocol):
     def flags(self):
         return self.__header.flags
 
-    def get_encapsulated_data(self) -> bytes:
-        return NetworkProtocol.get_data(self, self.header.header_length)
-
-    def get_proto_info(self) -> str:
-        return ''  # TODO: realize function, that return pretty view about network protocol
-
     @property
     def header(self) -> TCPHeader:
         return self.__header
@@ -122,6 +142,13 @@ class TCPPacket(NetworkProtocol):
         else:
             raise Exs.TCPPacketParseError('No parent')
 
+    @property
+    def parent(self) -> IPPacketHeader:
+        return self.__parent
+
+    def get_encapsulated_data(self) -> bytes:
+        return NetworkProtocol.get_data(self, self.header.header_length)
+
     def checksum(self) -> int:
         packet = self.pseudo_header + self.__header.build_header(checksum=0) + self.get_encapsulated_data()
         if len(packet) % 2 != 0:
@@ -133,8 +160,13 @@ class TCPPacket(NetworkProtocol):
 
         return (~res) & 0xffff
 
-    def send_packet(self):
-        pass
+    def get_tcp_packet(self) -> bytes:
+        return self.__header.build_header(checksum=self.checksum()) + self.get_encapsulated_data()
+
+    def get_proto_info(self) -> str:
+        result = str(self.__parent)
+        result += str(self.header)
+        return result
 
     def get_json_proto_header(self):
         pass

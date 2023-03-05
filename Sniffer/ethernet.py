@@ -7,6 +7,8 @@ from .protocol import NetworkLevel, NetworkProtocol
 
 
 class EthernetFrameHeader:
+    __level: NetworkLevel = NetworkLevel.DATALINK
+
     def __init__(self, src_mac: bytes, dst_mac: bytes, encapsulated_proto: int) -> None:
         self.__src_mac: bytes = src_mac
         self.__dst_mac: bytes = dst_mac
@@ -14,23 +16,33 @@ class EthernetFrameHeader:
 
     @property
     def format_src_mac(self) -> str:
-        return NetworkProtocol.get_format_address(self.__src_mac, sep=';', function="{:02x}".format).upper()
+        return NetworkProtocol.get_format_address(self.__src_mac, sep=':', function="{:02x}".format).upper()
 
     @property
     def format_dst_mac(self) -> str:
-        return NetworkProtocol.get_format_address(self.__dst_mac, sep=';', function="{:02x}".format).upper()
+        return NetworkProtocol.get_format_address(self.__dst_mac, sep=':', function="{:02x}".format).upper()
 
     @property
     def encapsulated_proto(self) -> int:
         return socket.ntohs(self.__encapsulated_proto)
 
     @property
-    def src_mac(self) -> bytes:
+    def source_mac(self) -> bytes:
         return self.__src_mac
 
     @property
-    def dst_mac(self) -> bytes:
+    def destination_mac(self) -> bytes:
         return self.__dst_mac
+
+    @property
+    def level(self) -> NetworkLevel:
+        return self.__level
+
+    def __str__(self) -> str:
+        result = f'{self.__level.value}\tEthernetProtocol:\n'
+        result += f'Src MAC: {self.format_src_mac}\tDst MAC: {self.format_dst_mac}\t' \
+                  f'Eth Proto: {self.encapsulated_proto}\n'
+        return result
 
 
 class EthernetFrame(NetworkProtocol):
@@ -38,10 +50,8 @@ class EthernetFrame(NetworkProtocol):
     Layer 2 protocol implementation of the OSI model.
     This class allows you to define Ethernet frame fields and save them in different formats.
     """
-
     def __init__(self, raw_data: bytes):
         NetworkProtocol.__init__(self, raw_data)
-        self.__level: NetworkLevel = NetworkLevel.DATALINK
         self.__header = self.__parse_data()
         self.__offset: int = 14
 
@@ -60,12 +70,12 @@ class EthernetFrame(NetworkProtocol):
         return self.__header
 
     @property
-    def src_mac(self) -> bytes:
-        return self.__header.src_mac
+    def source_mac(self) -> bytes:
+        return self.__header.source_mac
 
     @property
-    def dst_mac(self) -> bytes:
-        return self.__header.dst_mac
+    def destination_mac(self) -> bytes:
+        return self.__header.destination_mac
 
     @property
     def encapsulated_proto(self) -> int:
@@ -75,6 +85,7 @@ class EthernetFrame(NetworkProtocol):
         return NetworkProtocol.get_data(self, self.__offset)
 
     def get_proto_info(self) -> str:
-        result = f'{self.__level.value}\tEthernetProtocol:\n'
-        result += f'Src MAC: {self.__src_mac}\tDst MAC: {self.__dst_mac}\tEth Proto: {self.__encapsulated_proto}\n'
-        return result
+        return str(self.__header)
+
+    def get_json_proto_header(self):
+        pass

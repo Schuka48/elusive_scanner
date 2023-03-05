@@ -1,18 +1,18 @@
 import socket
 
-from art import tprint
+# from art import tprint
 
 # # from . import protocol
 from .ethernet import EthernetFrame
 from .ip import IPPacket
-from .tcp import TCPProtocol
+from .tcp import TCPPacket
 
 
-def filtrate_eth_frame(frame: EthernetFrame) -> bool:
-    if frame.src_mac == '00:00:00:00:00:00' and frame.dst_mac == '00:00:00:00:00:00':
-        return False
-    else:
-        return True
+# def filtrate_eth_frame(frame: EthernetFrame) -> bool:
+#     if frame.src_mac == '00:00:00:00:00:00' and frame.dst_mac == '00:00:00:00:00:00':
+#         return False
+#     else:
+#         return True
 
 
 def start_sniffer():
@@ -20,16 +20,18 @@ def start_sniffer():
     while True:
         raw_data = sniffer.recvfrom(65535)[0]
         ethernet = EthernetFrame(raw_data)
-        if filtrate_eth_frame(ethernet):
-            if ethernet.encapsulated_proto == 8:
+        if ethernet.encapsulated_proto == 8:
+            ip_packet = IPPacket(ethernet.get_encapsulated_data(), ethernet.header)
+            if ip_packet.protocol == 6:
+                tcp_packet = TCPPacket(ip_packet.get_encapsulated_data(), ip_packet.header)
+                # if tcp_packet.parent.source_address == '192.168.148.129' or tcp_packet.parent.source_address == '192.168.148.1':
+                print(tcp_packet)
+                print(ip_packet.get_encapsulated_data())
+                print(tcp_packet.header.get_raw_header())
+                print('-' * 30)
 
-                ip = IPPacket(ethernet.get_encapsulated_data(), ethernet.header)
-                if ip.protocol == 6:
-                    tcp = TCPProtocol(ip.get_encapsulated_data())
-        else:
-            continue
 
 
 if __name__ == '__main__':
-    tprint('My Sniffer')
+    # tprint('My Sniffer')
     start_sniffer()

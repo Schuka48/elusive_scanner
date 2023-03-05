@@ -7,6 +7,8 @@ from .ethernet import EthernetFrameHeader
 
 
 class IPPacketHeader:
+    __level: NetworkLevel = NetworkLevel.NETWORK
+
     def __init__(self, ip_header: tuple):
         self.__version = ip_header[0] >> 4
         self.__hLen = ip_header[0] & 0xF
@@ -18,6 +20,8 @@ class IPPacketHeader:
         self.__ttl = ip_header[5]
         self.__proto = ip_header[6]
         self.__checksum = ip_header[7]
+        # self.__src_addr = ip_header[8]
+        # self.__dst_addr = ip_header[9]
         self.__src_addr = NetworkProtocol.get_format_address(ip_header[8], sep='.', function=str)
         self.__dst_addr = NetworkProtocol.get_format_address(ip_header[9], sep='.', function=str)
 
@@ -36,6 +40,23 @@ class IPPacketHeader:
     @property
     def protocol(self):
         return self.__proto
+
+    @property
+    def ttl(self):
+        return self.__ttl
+
+    @property
+    def level(self):
+        return self.__level
+
+    @property
+    def total_length(self):
+        return self.__total_len
+
+    def __str__(self) -> str:
+        result = f'{self.__level.value}\tIPv4:\n'
+        result += f'TTL: {self.ttl}\tSrc: {self.source_address}\tDst: {self.destination_address}\n'
+        return result
 
 
 class IPPacket(NetworkProtocol):
@@ -74,13 +95,12 @@ class IPPacket(NetworkProtocol):
         return self.__header.protocol
 
     def get_encapsulated_data(self) -> bytes:
-        return NetworkProtocol.get_data(self, self.__offset)
+        return NetworkProtocol.get_data(self, self.__offset, self.header.total_length)
 
     def get_proto_info(self) -> str:
         # TODO: realize function, that return pretty view about network protocol
         result = str(self.__parent)
-        result += f'{self.__level.value}\tIPv4:\n'
-        result += f'TTL: {self.__ttl}\tSrc: {self.__src_addr}\tDst: {self.__dst_addr}\n'
+        result += str(self.__header)
         return result
 
     def set_parent(self, parent: EthernetFrameHeader) -> None:
@@ -89,4 +109,5 @@ class IPPacket(NetworkProtocol):
     def set_child(self, child) -> None:
         self.__child = child
 
-
+    def get_json_proto_header(self):
+        pass

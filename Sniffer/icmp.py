@@ -37,6 +37,9 @@ class ICMPHeader:
     def offset(self) -> int:
         return self.__offset
 
+    def build_header(self) -> bytes:
+        return struct.pack('!BBHI', self.__type, self.__code, self.__checksum, self.__add_info) + self.__other_data
+
     def __str__(self) -> str:
         result = f'{self.__level.value}\tICMP:\n'
         result += f'Type: {self.__type}\tCode: {self.__code}\tChecksum: {self.__checksum}\n'
@@ -81,6 +84,9 @@ class ICMPPacket(NetworkProtocol):
     @property
     def header(self) -> ICMPHeader:
         return self.__header
+
+    def get_icmp_packet(self):
+        return self.__header.build_header() + self.__encapsulated_data.encapsulate_data
 
     def get_proto_info(self) -> str:
         result = str(self.__parent)

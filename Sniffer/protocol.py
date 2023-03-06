@@ -4,6 +4,16 @@ from typing import Callable
 import Exceptions.exception as Exs
 
 
+class ProtocolType(Enum):
+    """
+    This class implements an enumeration that contains the protocol types according to the OSI model.
+    """
+    IP = 8
+    ICMP = 1
+    TCP = 6
+    UDP = 17
+
+
 class NetworkLevel(Enum):
     """
     This class implements an enumeration that contains the layers of network protocols according to the OSI model.
@@ -50,16 +60,3 @@ class NetworkProtocol:
     def get_json_proto_header(self):
         raise NotImplementedError('Override function')
 
-
-class ARP(NetworkProtocol):
-    pass
-
-class UDP(NetworkProtocol):
-    pass
-
-class ICMP(NetworkProtocol):
-    pass
-
-
-if __name__ == '__main__':
-    pass

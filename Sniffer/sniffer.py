@@ -6,13 +6,7 @@ import socket
 from .ethernet import EthernetFrame
 from .ip import IPPacket
 from .tcp import TCPPacket
-
-
-# def filtrate_eth_frame(frame: EthernetFrame) -> bool:
-#     if frame.src_mac == '00:00:00:00:00:00' and frame.dst_mac == '00:00:00:00:00:00':
-#         return False
-#     else:
-#         return True
+from .udp import UDPPacket
 
 
 def start_sniffer():
@@ -24,12 +18,19 @@ def start_sniffer():
             ip_packet = IPPacket(ethernet.get_encapsulated_data(), ethernet.header)
             if ip_packet.protocol == 6:
                 tcp_packet = TCPPacket(ip_packet.get_encapsulated_data(), ip_packet.header)
-                # if tcp_packet.parent.source_address == '192.168.148.129' or tcp_packet.parent.source_address == '192.168.148.1':
-                print(tcp_packet)
-                print(ip_packet.get_encapsulated_data())
-                print(tcp_packet.header.get_raw_header())
-                print('-' * 30)
-
+                if tcp_packet.parent.source_address == '10.33.0.200' or tcp_packet.parent.destination_address == '10.33.0.200':
+                    print(tcp_packet)
+                    print(ip_packet.get_encapsulated_data())
+                    print(tcp_packet.get_tcp_packet())
+                    print('-' * 30)
+            elif ip_packet.protocol == 17:
+                udp_packet = UDPPacket(ip_packet.get_encapsulated_data(), ip_packet.header)
+                if udp_packet.parent.source_address == '10.33.0.200' or udp_packet.parent.destination_address == '10.33.0.200':
+                    print(udp_packet)
+                    print(ip_packet.get_encapsulated_data())
+                    print(udp_packet.get_udp_packet())
+                    print(UDPPacket(udp_packet.get_udp_packet()).header.checksum)
+                    print('-' * 30)
 
 
 if __name__ == '__main__':

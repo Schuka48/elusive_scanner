@@ -1,6 +1,6 @@
 import struct
 import socket
-import  array
+import array
 
 import Exceptions.exception as Exs
 
@@ -45,7 +45,7 @@ class UDPHeader:
 
     def __str__(self) -> str:
         result = f'{self.__level.value}\tUDP:\n'
-        result += f'Src Port: {self.source_port}\tDst Port: {self.destination_port}\n Checksum: {self.checksum}\n'
+        result += f'Src Port: {self.source_port}\tDst Port: {self.destination_port}\tChecksum: {hex(self.checksum)}\n'
         return result
 
 
@@ -83,6 +83,10 @@ class UDPPacket(NetworkProtocol):
         return self.__header.length
 
     @property
+    def parent(self) -> IPPacketHeader:
+        return self.__parent
+
+    @property
     def pseudo_header(self) -> bytes:
         if self.__parent is not None:
             return struct.pack(
@@ -104,14 +108,16 @@ class UDPPacket(NetworkProtocol):
 
         return (~res) & 0xffff
 
-    def get_tcp_packet(self) -> bytes:
+    def get_udp_packet(self) -> bytes:
         return self.__header.build_header(checksum=self.checksum()) + self.get_encapsulated_data()
 
     def get_encapsulated_data(self) -> bytes:
         return NetworkProtocol.get_data(self, self.__header.offset)
 
     def get_proto_info(self) -> str:
-        return ''
+        result = str(self.__parent)
+        result += str(self.__header)
+        return result
 
     def get_json_proto_header(self):
         pass

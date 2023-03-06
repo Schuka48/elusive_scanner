@@ -17,6 +17,7 @@ def chksum(packet):
 
     return (~res) & 0xffff
 
+
 # the main function
 def main():
     # create a raw socket
@@ -34,7 +35,7 @@ def main():
     packet = ''
 
     source_ip = '10.33.80.55'
-    dest_ip = '10.0.0.1'  # or socket.gethostbyname('www.google.com')
+    dest_ip = '10.33.0.200'  # or socket.gethostbyname('www.google.com')
 
     # ip header fields
     ip_ihl = 5

@@ -96,7 +96,7 @@ class TCPPacket(NetworkProtocol):
         NetworkProtocol.__init__(self, raw_data)
         self.__level: NetworkLevel = NetworkLevel.TRANSPORT
         self.__header = self.__parse_data()
-        self.__parent = parent
+        self.__parent: IPPacketHeader = parent
         self.__child = None
 
     def __parse_data(self) -> TCPHeader:

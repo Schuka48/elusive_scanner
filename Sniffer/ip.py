@@ -53,6 +53,9 @@ class IPPacketHeader:
     def total_length(self):
         return self.__total_len
 
+    def set_source_address(self, source_address: str):
+        self.__src_addr = source_address
+
     def __str__(self) -> str:
         result = f'{self.__level.value}\tIPv4:\n'
         result += f'TTL: {self.ttl}\tSrc: {self.source_address}\tDst: {self.destination_address}\n'
@@ -108,6 +111,9 @@ class IPPacket(NetworkProtocol):
 
     def set_child(self, child) -> None:
         self.__child = child
+
+    def set_source_address(self, ip_address: str) -> None:
+        self.__header.set_source_address(ip_address)
 
     def get_json_proto_header(self):
         pass

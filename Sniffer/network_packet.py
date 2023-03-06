@@ -23,7 +23,7 @@ class Packet:
         self.__parse_raw_data()
 
     @property
-    def stack(self) -> dict[NetworkLevel, list]:
+    def stack(self):
         return self.__network_stack
 
     @property
@@ -32,13 +32,13 @@ class Packet:
 
     @property
     def ip_packet(self) -> IPPacket:
-        return self.stack[NetworkLevel.NETWORK].pop(0)
+        return self.__network_stack[NetworkLevel.NETWORK][0]
 
     def __str__(self):
-        return str(self.stack[self.__end_protocol.end_level].pop())
+        return str(self.stack[self.__end_protocol.end_level][-1])
 
     def __put_packet_on_stack(self, level: NetworkLevel, proto_type: ProtocolType, packet):
-        self.stack[level] = [packet]
+        self.__network_stack[level] = [packet]
         self.__end_protocol = EndInfo(proto_type, level)
 
     def __parse_tcp_packet(self, ip_packet: IPPacket) -> None:
@@ -55,7 +55,7 @@ class Packet:
 
     def __parse_raw_data(self):
         ip_packet = IPPacket(self.__raw_data, self.datalink_header)
-        self.stack[NetworkLevel.NETWORK] = [ip_packet]
+        self.__network_stack[NetworkLevel.NETWORK] = [ip_packet]
 
         if ip_packet.protocol == ProtocolType.TCP.value:
             self.__parse_tcp_packet(ip_packet)

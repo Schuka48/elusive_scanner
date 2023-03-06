@@ -17,6 +17,5 @@ def start_sniffer():
         ethernet = EthernetFrame(raw_data)
         if ethernet.encapsulated_proto == 8:
             np = Packet(ethernet)
-            if np.ip_packet.source_address == '10.33.0.200' or np.ip_packet.destination_address == '10.33.0.200':
+            if np.ip_packet.source_address == '192.168.148.1' or np.ip_packet.destination_address == '192.168.148.1':
                 print(np)
-

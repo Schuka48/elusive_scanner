@@ -95,7 +95,7 @@ class UDPPacket(NetworkProtocol):
                 socket.IPPROTO_UDP, self.data_length
             )
         else:
-            raise Exs.TCPPacketParseError('No parent')
+            raise Exs.UDPPacketParseError('No parent')
 
     def checksum(self) -> int:
         packet = self.pseudo_header + self.__header.build_header(checksum=0) + self.get_encapsulated_data()
@@ -108,7 +108,7 @@ class UDPPacket(NetworkProtocol):
 
         return (~res) & 0xffff
 
-    def get_udp_packet(self) -> bytes:
+    def get_packet(self) -> bytes:
         return self.__header.build_header(checksum=self.checksum()) + self.get_encapsulated_data()
 
     def get_encapsulated_data(self) -> bytes:

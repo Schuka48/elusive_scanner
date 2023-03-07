@@ -8,6 +8,7 @@ from .ip import IPPacket
 from .tcp import TCPPacket
 from .udp import UDPPacket
 from .network_packet import Packet
+from .icmp import ICMPPacket
 
 
 def start_sniffer():
@@ -16,6 +17,12 @@ def start_sniffer():
         raw_data = sniffer.recvfrom(65535)[0]
         ethernet = EthernetFrame(raw_data)
         if ethernet.encapsulated_proto == 8:
-            np = Packet(ethernet)
-            if np.ip_packet.source_address == '192.168.148.1' or np.ip_packet.destination_address == '192.168.148.1':
-                print(np)
+            # np = Packet(ethernet)
+            # if np.ip_packet.source_address == '10.33.0.200' or np.ip_packet.destination_address == '10.33.0.200':
+            #     print(np)
+            ip_packet = IPPacket(ethernet.get_encapsulated_data(), ethernet.header)
+            if ip_packet.protocol == 1:
+                icmp_packet = ICMPPacket(ip_packet.get_encapsulated_data(), ip_packet.header)
+                print(icmp_packet)
+                print(ICMPPacket(icmp_packet.get_packet(), ip_packet.header))
+                print('-' * 30)

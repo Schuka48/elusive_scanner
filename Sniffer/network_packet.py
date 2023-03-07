@@ -38,7 +38,10 @@ class Packet:
         return str(self.stack[self.__end_protocol.end_level][-1])
 
     def __put_packet_on_stack(self, level: NetworkLevel, proto_type: ProtocolType, packet):
-        self.__network_stack[level] = [packet]
+        if self.__network_stack.get(level) is None:
+            self.__network_stack[level] = [packet]
+        else:
+            self.__network_stack[level].append(packet)
         self.__end_protocol = EndInfo(proto_type, level)
 
     def __parse_tcp_packet(self, ip_packet: IPPacket) -> None:

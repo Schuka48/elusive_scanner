@@ -160,7 +160,7 @@ class TCPPacket(NetworkProtocol):
 
         return (~res) & 0xffff
 
-    def get_tcp_packet(self) -> bytes:
+    def get_packet(self) -> bytes:
         return self.__header.build_header(checksum=self.checksum()) + self.get_encapsulated_data()
 
     def get_proto_info(self) -> str:

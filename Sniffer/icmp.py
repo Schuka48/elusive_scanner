@@ -1,4 +1,6 @@
 import struct
+import array
+import socket
 
 import Exceptions.exception as Exs
 
@@ -37,12 +39,17 @@ class ICMPHeader:
     def offset(self) -> int:
         return self.__offset
 
-    def build_header(self) -> bytes:
-        return struct.pack('!BBHI', self.__type, self.__code, self.__checksum, self.__add_info) + self.__other_data
+    @property
+    def encapsulated_data(self):
+        return self.__other_data
+
+    def build_header(self, checksum=0) -> bytes:
+        return struct.pack('!BB', self.__type, self.__code) + struct.pack('H', checksum) + \
+            struct.pack('!I', self.__add_info)
 
     def __str__(self) -> str:
         result = f'{self.__level.value}\tICMP:\n'
-        result += f'Type: {self.__type}\tCode: {self.__code}\tChecksum: {self.__checksum}\n'
+        result += f'Type: {self.__type}\tCode: {self.__code}\tChecksum: {hex(self.__checksum)}\n'
         result += f'Data: {self.__other_data}\n'
         return result
 
@@ -64,7 +71,7 @@ class ICMPPacket(NetworkProtocol):
         NetworkProtocol.__init__(self, raw_data)
         self.__level: NetworkLevel = NetworkLevel.NETWORK
         self.__header = self.__parse_data()
-        self.__encapsulated_data = ICMPData(self.raw_data[self.header.offset:], self.__header)
+        self.__encapsulated_data = self.__header.encapsulated_data
         self.__parent: IPPacketHeader = parent
 
     def __parse_data(self) -> ICMPHeader:
@@ -85,8 +92,19 @@ class ICMPPacket(NetworkProtocol):
     def header(self) -> ICMPHeader:
         return self.__header
 
-    def get_icmp_packet(self):
-        return self.__header.build_header() + self.__encapsulated_data.encapsulate_data
+    def checksum(self) -> int:
+        packet = self.__header.build_header(checksum=0) + self.__encapsulated_data
+        if len(packet) % 2 != 0:
+            packet += b'\0'
+
+        res = sum(array.array("H", packet))
+        res = (res >> 16) + (res & 0xffff)
+        res += res >> 16
+
+        return (~res) & 0xffff
+
+    def get_packet(self):
+        return self.__header.build_header(checksum=self.checksum()) + self.__encapsulated_data
 
     def get_proto_info(self) -> str:
         result = str(self.__parent)

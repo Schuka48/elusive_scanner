@@ -20,14 +20,22 @@ class NoListenIp(ArgParseError):
 class NetworkParseError(Exception):
     pass
 
+
 class EthernetFrameParseError(NetworkParseError):
     pass
+
 
 class IPPacketParseError(NetworkParseError):
     pass
 
+
 class TCPPacketParseError(NetworkParseError):
     pass
 
+
 class UDPPacketParseError(NetworkParseError):
+    pass
+
+
+class ICMPPacketParseError(NetworkParseError):
     pass

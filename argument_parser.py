@@ -33,7 +33,8 @@ def get_args() -> argparse.Namespace:
     add_args(parser)
     parser.print_help()
     args = parser.parse_args()
-    if check_args(args):
-        return args
-    else:
-        raise Exs.ArgParseError('Some problem with module argparse.')
+    # if check_args(args):
+
+    return args
+    # else:
+        # raise Exs.ArgParseError('Some problem with module argparse.')

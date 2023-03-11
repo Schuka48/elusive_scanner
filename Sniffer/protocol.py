@@ -12,6 +12,7 @@ class ProtocolType(Enum):
     ICMP = 1
     TCP = 6
     UDP = 17
+    ARP = 26632
 
 
 class NetworkLevel(Enum):

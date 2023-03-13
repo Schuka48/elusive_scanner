@@ -12,11 +12,13 @@ class NetworkFilter:
         if self.params.get('ARP') is None and net_level_proto == pt.ARP.value:
             return False
         elif net_level_proto == pt.IP.value:
-            target_ip = self.params.get('target_ip')
+            destination_ip = self.params.get('target_ip')
+            source_ip = self.params.get('listen_ip')
             ip_packet = IPPacket(ethernet.get_encapsulated_data(), ethernet.header)
-            if ip_packet.destination_address == target_ip:
+            if ip_packet.destination_address == destination_ip and ip_packet.source_address == source_ip:
                 return True
             else:
+                # TODO: Сделать фильтр интеллектуальнее
                 return False
 
 

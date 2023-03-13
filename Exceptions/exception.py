@@ -17,6 +17,10 @@ class NoListenIp(ArgParseError):
         return 'No IP address to listen for connections'
 
 
+class StopSniffer(Exception):
+    pass
+
+
 class NetworkParseError(Exception):
     pass
 

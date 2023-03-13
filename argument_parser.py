@@ -11,8 +11,11 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument('--li', '--listenip', dest='listen_ip',
                         help='IP address for listen to connections')
 
-    parser.add_argument('--lp', '--listenport', dest='listen_port',
-                        help='Port to listen for connections')
+    parser.add_argument('--sf', '--script_file', dest='script_file',
+                        help="Path to the script file, that's generate active data")
+
+    parser.add_argument('--is-router', action='store_true', dest='is_router',
+                        help='Set this flag if the device is a node in transport network')
 
 
 def check_args(args: argparse.Namespace) -> bool:

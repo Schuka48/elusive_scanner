@@ -68,3 +68,8 @@ class Packet:
 
         elif ip_packet.protocol == ProtocolType.ICMP.value:
             self.__parse_icmp_packet(ip_packet)
+
+
+def create_active_packet(packet: Packet) -> Packet:
+    """Фунцкия для подготовки пакета к помещению в сценарий активных данных"""
+    pass

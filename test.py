@@ -1,8 +1,5 @@
-import socket
-
 # from art import tprint
-from Sniffer.sniffer import start_sniffer
-from Sniffer import network_packet as np
+from sniffer import start_sniffer
 
 
 def test(lst):

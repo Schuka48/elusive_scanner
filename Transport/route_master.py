@@ -9,6 +9,9 @@ class Route:
     def __str__(self):
         pass
 
+    def get_destination(self) -> str:
+        pass
+
 
 class RouteMaster:
     def __init__(self):

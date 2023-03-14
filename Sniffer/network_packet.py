@@ -34,6 +34,10 @@ class Packet:
     def ip_packet(self) -> IPPacket:
         return self.__network_stack[NetworkLevel.NETWORK][0]
 
+    @property
+    def last_protocol(self):
+        return self.__end_protocol
+
     def __str__(self):
         return str(self.stack[self.__end_protocol.end_level][-1])
 
@@ -70,6 +74,32 @@ class Packet:
             self.__parse_icmp_packet(ip_packet)
 
 
-def create_active_packet(packet: Packet) -> Packet:
+def create_active_packet(packet: Packet, destination: str):
     """Фунцкия для подготовки пакета к помещению в сценарий активных данных"""
-    pass
+    top_level = packet.last_protocol
+
+    if top_level.end_level == NetworkLevel.NETWORK:
+        if top_level.end_protocol == ProtocolType.ICMP:
+            pass
+
+        elif top_level.end_protocol == ProtocolType.IP:
+            pass
+
+        else:
+            pass
+    elif top_level.end_level == NetworkLevel.TRANSPORT:
+        if top_level.end_protocol == ProtocolType.TCP:
+            tcp_packet: TCPPacket = packet.stack[NetworkLevel.TRANSPORT][0]
+            ip_packet: IPPacket = packet.stack[NetworkLevel.NETWORK][0]
+            ip_packet.set_source_address(destination)
+            raw_packet = ip_packet.header.build_header() + tcp_packet.get_packet()
+            return raw_packet
+
+        elif top_level.end_protocol == ProtocolType.UDP:
+            pass
+
+        else:
+            pass
+    else:
+        pass
+

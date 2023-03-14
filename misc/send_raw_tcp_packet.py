@@ -34,8 +34,8 @@ def main():
     # now start constructing the packet
     packet = ''
 
-    source_ip = '10.33.80.55'
-    dest_ip = '10.33.0.200'  # or socket.gethostbyname('www.google.com')
+    source_ip = '192.168.25.12'
+    dest_ip = '192.168.25.1'  # or socket.gethostbyname('www.google.com')
 
     # ip header fields
     ip_ihl = 5

@@ -1,4 +1,6 @@
 import struct
+import array
+import socket
 
 import Exceptions.exception as Exs
 
@@ -10,6 +12,7 @@ class IPPacketHeader:
     __level: NetworkLevel = NetworkLevel.NETWORK
 
     def __init__(self, ip_header: tuple):
+        self.__first_byte = ip_header[0]
         self.__version = ip_header[0] >> 4
         self.__hLen = ip_header[0] & 0xF
         self.__header_len = self.__hLen * 4
@@ -59,7 +62,25 @@ class IPPacketHeader:
     def __str__(self) -> str:
         result = f'{self.__level.value}\tIPv4:\n'
         result += f'TTL: {self.ttl}\tSrc: {self.source_address}\tDst: {self.destination_address}\n'
+        result += f'Checksum: {hex(self.__checksum)}\n'
         return result
+
+    def build_header(self, checksum=0) -> bytes:
+        header = struct.pack('!B', self.__first_byte) +\
+                 struct.pack('!BHHHBB', self.__tos, self.__total_len, self.__unique_id, self.__offset_flags, self.__ttl,
+                             self.__proto) +\
+                 struct.pack('H', checksum) + struct.pack('!4s4s', socket.inet_aton(self.__src_addr),
+                                                          socket.inet_aton(self.__dst_addr))
+        return header
+
+    def get_raw_header(self):
+        header = struct.pack('!BBHHHBBH4s4s', self.__first_byte, self.__tos, self.__total_len,
+                             self.__unique_id, self.__offset_flags, self.__ttl, self.__proto, self.__checksum,
+                             self.__src_addr, self.__dst_addr)
+        return header
+
+    def set_destination_address(self, destination_address: str) -> None:
+        self.__dst_addr = destination_address
 
 
 class IPPacket(NetworkProtocol):
@@ -97,8 +118,22 @@ class IPPacket(NetworkProtocol):
     def protocol(self):
         return self.__header.protocol
 
+    def checksum(self) -> int:
+        packet = self.__header.build_header(checksum=0) + self.get_encapsulated_data()
+        if len(packet) % 2 != 0:
+            packet += b'\0'
+
+        res = sum(array.array("H", packet))
+        res = (res >> 16) + (res & 0xffff)
+        res += res >> 16
+
+        return (~res) & 0xffff
+
     def get_encapsulated_data(self) -> bytes:
         return NetworkProtocol.get_data(self, self.__offset, self.header.total_length)
+
+    def get_packet(self) -> bytes:
+        return self.__header.build_header(checksum=self.checksum()) + self.get_encapsulated_data()
 
     def get_proto_info(self) -> str:
         # TODO: realize function, that return pretty view about network protocol
@@ -114,6 +149,10 @@ class IPPacket(NetworkProtocol):
 
     def set_source_address(self, ip_address: str) -> None:
         self.__header.set_source_address(ip_address)
+        self.checksum()
+
+    def set_destination_address(self, ip_address: str) -> None:
+        self.__header.set_destination_address(ip_address)
 
     def get_json_proto_header(self):
         pass

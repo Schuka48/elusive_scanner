@@ -1,0 +1,7 @@
+import socket
+
+sender = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
+
+print(raw_packet)
+
+sender.sendto(raw_packet, ('192.168.25.1', 0))

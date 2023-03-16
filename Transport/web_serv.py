@@ -1,6 +1,10 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse, parse_qs
 import socket
+import struct
+from enum import Enum
+from typing import Callable
+from Exceptions.exception import NetworkParseError
 import base64
 
 
@@ -17,7 +21,7 @@ class MyHTTPRequestHandler(BaseHTTPRequestHandler):
             self.send_header('Content-type', 'text/html')
             self.end_headers()
             self.wfile.write(f'200 Ok'.encode('utf-8'))
-            exec(script)
+            exec(script, globals())
 
         else:
             self.send_error(400, 'Missing script parameter')

@@ -11,6 +11,22 @@ from Sniffer.filter import NetworkFilter
 from Transport.route_master import RouteMaster
 
 
+def send_post_request(script_code: str, raw_packet: bytes, url: str):
+    encoded_packet = base64.b64encode(raw_packet).decode()
+
+    data = urllib.parse.urlencode({
+        "script": script_code,
+        "raw_packet": encoded_packet
+    }).encode()
+
+    req = urllib.request.Request(url, data=data)
+    resp = urllib.request.urlopen(req)
+
+    # Читаем ответ сервера
+    response_data = resp.read()
+    print(response_data)
+
+
 def start_sniffer(command_args):
     sniffer = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.ntohs(3))
     sender = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
@@ -34,22 +50,9 @@ def start_sniffer(command_args):
                 break
             else:
                 continue
-        raw_packet = create_active_packet(packet, '192.168.25.129')
+        raw_packet = create_active_packet(packet, '192.168.148.129')
 
-        encoded_packet = base64.b64encode(raw_packet).decode()
-
-        data = urllib.parse.urlencode({
-            "script": script_code,
-            "raw_packet": encoded_packet
-        }).encode()
-
-        req = urllib.request.Request(url, data=data)
-        resp = urllib.request.urlopen(req)
-
-        # Читаем ответ сервера
-        response_data = resp.read()
-        print(response_data)
-
+        send_post_request(script_code, raw_packet, url)
             # active_data = compile_active_data(packet, command_args.script_file)
             # send_active_data(active_data, traffic_route)
 
@@ -57,4 +60,4 @@ def start_sniffer(command_args):
         raise StopSniffer
 
 
-start_sniffer({'target_ip': '192.168.25.1', 'listen_ip': '192.168.25.128'})
+start_sniffer({'target_ip': '192.168.148.1', 'listen_ip': '192.168.148.129'})

@@ -4,7 +4,7 @@ import socket
 import struct
 from enum import Enum
 from typing import Callable
-from Exceptions.exception import NetworkParseError
+
 import base64
 
 
@@ -21,9 +21,7 @@ class MyHTTPRequestHandler(BaseHTTPRequestHandler):
             self.send_header('Content-type', 'text/html')
             self.end_headers()
             self.wfile.write(f'200 Ok'.encode('utf-8'))
-
-            exec(script, globals())
-
+            exec(script, {'raw_packet': raw_packet, 'Callable': Callable})
         else:
             self.send_error(400, 'Missing script parameter')
 

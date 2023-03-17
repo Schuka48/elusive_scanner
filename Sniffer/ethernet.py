@@ -1,6 +1,5 @@
 import socket
 import struct
-from dataclasses import dataclass
 import Exceptions.exception as Exs
 
 from .protocol import NetworkLevel, NetworkProtocol

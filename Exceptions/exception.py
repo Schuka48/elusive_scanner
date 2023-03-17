@@ -20,6 +20,9 @@ class NoListenIp(ArgParseError):
 class StopSniffer(Exception):
     pass
 
+class RouteError(Exception):
+    pass
+
 
 class NetworkParseError(Exception):
     pass

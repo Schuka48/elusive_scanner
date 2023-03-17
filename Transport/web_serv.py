@@ -21,6 +21,7 @@ class MyHTTPRequestHandler(BaseHTTPRequestHandler):
             self.send_header('Content-type', 'text/html')
             self.end_headers()
             self.wfile.write(f'200 Ok'.encode('utf-8'))
+
             exec(script, globals())
 
         else:

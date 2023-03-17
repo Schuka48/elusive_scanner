@@ -28,8 +28,11 @@ def send_post_request(script_code: str, raw_packet: bytes, url: str):
 
 
 def start_sniffer(command_args):
-    sniffer = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.ntohs(3))
+    sniffer = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.htons(0x0003))
+    sniffer.bind(('eth0', 0))
+
     sender = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
+
     script_code = open('misc/script.txt', 'rt').read()
     url = 'http://localhost:8000'
 
@@ -42,22 +45,20 @@ def start_sniffer(command_args):
         while True:
             traffic_route = route_master.create_route()  # попробовать многопоточно
             raw_data = sniffer.recvfrom(65535)[0]
+
             ethernet = EthernetFrame(raw_data)
 
             if net_filter.filtrate(ethernet):
                 packet = Packet(ethernet)
                 print(packet)
-                break
+                raw_packet = create_active_packet(packet, '192.168.25.55')
+                send_post_request(script_code, raw_packet, url)
+                sender.sendto(raw_packet, ('10.33.0.200', 0))
             else:
                 continue
-        raw_packet = create_active_packet(packet, '192.168.148.129')
-
-        send_post_request(script_code, raw_packet, url)
-            # active_data = compile_active_data(packet, command_args.script_file)
-            # send_active_data(active_data, traffic_route)
 
     except KeyboardInterrupt:
         raise StopSniffer
 
 
-start_sniffer({'target_ip': '192.168.148.1', 'listen_ip': '192.168.148.129'})
+start_sniffer({'target_ip': '10.33.0.200', 'listen_ip': '192.168.25.128'})

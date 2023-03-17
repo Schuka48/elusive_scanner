@@ -80,10 +80,16 @@ def create_active_packet(packet: Packet, destination: str):
 
     if top_level.end_level == NetworkLevel.NETWORK:
         if top_level.end_protocol == ProtocolType.ICMP:
-            pass
+            icmp_packet: ICMPPacket = packet.stack[NetworkLevel.NETWORK][1]
+            ip_packet = packet.stack[NetworkLevel.NETWORK][0]
+            ip_packet.set_source_address(destination)
+            raw_packet = ip_packet.header.build_header() + icmp_packet.get_packet()
+            return raw_packet
 
         elif top_level.end_protocol == ProtocolType.IP:
-            pass
+            ip_packet: IPPacket = packet.stack[NetworkLevel.NETWORK][0]
+            ip_packet.set_source_address(destination)
+            return ip_packet.get_packet()
 
         else:
             pass
@@ -96,7 +102,11 @@ def create_active_packet(packet: Packet, destination: str):
             return raw_packet
 
         elif top_level.end_protocol == ProtocolType.UDP:
-            pass
+            udp_packet: UDPPacket = packet.stack[NetworkLevel.TRANSPORT][0]
+            ip_packet: IPPacket = packet.stack[NetworkLevel.NETWORK][0]
+            ip_packet.set_source_address(destination)
+            raw_packet = ip_packet.header.build_header() + udp_packet.get_packet()
+            return raw_packet
 
         else:
             pass

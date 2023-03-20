@@ -1,6 +1,20 @@
 from .ethernet import EthernetFrame
 from .protocol import ProtocolType as pt
 from .ip import IPPacket
+from .tcp import TCPPacket
+
+
+def _check_only_rst_tcp_packet(tcp_packet: TCPPacket):
+    packet_flags = tcp_packet.flags
+    rst_flag = packet_flags.get('RST')
+    other_flags = [flag for flag_name, flag in packet_flags.items() if flag_name != 'RST']
+    if rst_flag != 0:
+        if any(other_flags):
+            return False
+        else:
+            return True
+    else:
+        return False
 
 
 class NetworkFilter:
@@ -21,6 +35,9 @@ class NetworkFilter:
 
             ip_packet = IPPacket(ethernet.get_encapsulated_data(), ethernet.header)
             if ip_packet.destination_address == destination_ip and ip_packet.source_address == source_ip:
+                if ip_packet.protocol == pt.TCP.value:
+                    if _check_only_rst_tcp_packet(TCPPacket(ip_packet.get_encapsulated_data(), ip_packet.header)):
+                        return False
                 return True
             else:
                 # TODO: Сделать фильтр интеллектуальнее

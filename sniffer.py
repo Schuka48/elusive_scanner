@@ -1,10 +1,10 @@
 import socket
 import urllib.parse
 import urllib.request
+import urllib.error
 import base64
-import struct
-from enum import Enum
-from typing import Callable
+import gzip
+
 
 from art import tprint
 from Exceptions.exception import StopSniffer
@@ -14,16 +14,18 @@ from Sniffer.filter import NetworkFilter
 from Transport.route_master import RouteMaster
 
 
-def send_post_request(script_code: str, raw_packet: bytes, url: str):
+def send_post_request(script_code: bytes, raw_packet: bytes, url: str):
     encoded_packet = base64.b64encode(raw_packet).decode()
 
     data = urllib.parse.urlencode({
         "script": script_code,
-        "raw_packet": encoded_packet
+        "raw_packet": encoded_packet,
+        "packet_route": '192.168.25.128'
     }).encode()
-    # Читаем ответ сервера
+
     req = urllib.request.Request(url, data=data)
     resp = urllib.request.urlopen(req)
+
     response_data = resp.read()
     print(response_data)
 
@@ -35,9 +37,7 @@ def start_sniffer(command_args):
 
     sender = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
 
-    sniffer = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.ntohs(3))
-
-    script_code = open('misc/script.txt', 'rt').read()
+    script_code = open('misc/script.py', 'rb').read()
 
     net_filter = NetworkFilter(command_args)
     # net_filter = NetworkFilter(vars(command_args))
@@ -53,10 +53,13 @@ def start_sniffer(command_args):
 
             if net_filter.filtrate(ethernet):
                 packet = Packet(ethernet)
-                print(packet)
+                # print(packet)
                 raw_packet = create_active_packet(packet, '192.168.25.128')
-                # send_post_request(script_code, raw_packet, url)
-                sender.sendto(raw_packet, ('192.168.25.1', 0))
+                try:
+                    send_post_request(script_code, raw_packet, url)
+                except urllib.error.URLError:
+                    pass
+                # sender.sendto(raw_packet, ('192.168.25.1', 0))
             else:
                 continue
 

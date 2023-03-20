@@ -21,10 +21,6 @@ def send_post_request(script_code: str, raw_packet: bytes, url: str):
         "script": script_code,
         "raw_packet": encoded_packet
     }).encode()
-
-    req = urllib.request.Request(url, data=data)
-    resp = urllib.request.urlopen(req)
-
     # Читаем ответ сервера
     req = urllib.request.Request(url, data=data)
     resp = urllib.request.urlopen(req)
@@ -34,7 +30,7 @@ def send_post_request(script_code: str, raw_packet: bytes, url: str):
 
 def start_sniffer(command_args):
     sniffer = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.htons(0x0003))
-    sniffer.bind(('eth0', 0))
+    sniffer.bind(('eth1', 0))
     url = 'http://localhost:8000'
 
     sender = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
@@ -58,9 +54,9 @@ def start_sniffer(command_args):
             if net_filter.filtrate(ethernet):
                 packet = Packet(ethernet)
                 print(packet)
-                raw_packet = create_active_packet(packet, '192.168.25.55')
-                send_post_request(script_code, raw_packet, url)
-                # sender.sendto(raw_packet, ('10.33.0.200', 0))
+                raw_packet = create_active_packet(packet, '192.168.25.128')
+                # send_post_request(script_code, raw_packet, url)
+                sender.sendto(raw_packet, ('192.168.25.1', 0))
             else:
                 continue
 
@@ -68,4 +64,4 @@ def start_sniffer(command_args):
         raise StopSniffer
 
 
-start_sniffer({'target_ip': '192.168.25.1', 'listen_ip': '192.168.25.128'})
+start_sniffer({'target_ip': '192.168.25.1', 'listen_ip': '192.168.148.5'})

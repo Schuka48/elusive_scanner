@@ -1,15 +1,17 @@
 import gzip
-from http.server import BaseHTTPRequestHandler, HTTPServer
-from urllib.parse import parse_qs
 import base64
+import socketserver
 from typing import NamedTuple
 from typing import Callable, AnyStr
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from urllib.parse import parse_qs
 
 
 class PostParams(NamedTuple):
     raw_packet: bytes
     script_code: str
     packet_route: str
+    target: str
 
 
 def _get_post_param(post_params: dict[AnyStr, list[AnyStr]], param_name: str):
@@ -25,27 +27,35 @@ class MyHTTPRequestHandler(BaseHTTPRequestHandler):
 
     def parse_request_data(self) -> PostParams:
         post_params = self._get_post_params()
-        if 'raw_packet' in post_params and 'script' in post_params and 'packet_route' in post_params:
+        try:
+            script_b64 = _get_post_param(post_params, 'script')
+            script_gz = base64.b64decode(script_b64.encode())
+            script_code = gzip.decompress(script_gz).decode()
             return PostParams(
                 base64.b64decode(_get_post_param(post_params, 'raw_packet')),
-                _get_post_param(post_params, 'script'),
-                _get_post_param(post_params, 'packet_route')
+                script_code,
+                _get_post_param(post_params, 'packet_route'),
+                _get_post_param(post_params, 'target')
             )
-        else:
+        except:
             raise EnvironmentError('Error while parsing POST params')
 
     def do_POST(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')
+        self.end_headers()
         try:
             post_params = self.parse_request_data()
             exec(
                 post_params.script_code,
-                {'raw_packet': post_params.raw_packet, 'packet_route': post_params.packet_route, 'Callable': Callable}
+                {
+                    'raw_packet': post_params.raw_packet,
+                    'packet_route': post_params.packet_route,
+                    'script_code': post_params.script_code,
+                    'target': post_params.target,
+                    'Callable': Callable
+                }
             )
-            print('Success execute')
-            self.send_response(200)
-            self.send_header('Content-type', 'text/html')
-            self.end_headers()
-            self.wfile.write(f'200 Ok'.encode('utf-8'))
         except EnvironmentError as ex:
             print(ex)
             self.send_error(400, 'Missing script parameter')

@@ -1,7 +1,13 @@
 import socket
 import struct
+import base64
+import gzip
+import urllib.parse
+import urllib.request
+import urllib.error
 import array
 import signal
+import random
 from enum import Enum
 from typing import Callable
 from dataclasses import dataclass
@@ -36,21 +42,11 @@ class NetworkProtocol:
         else:
             raise NetworkParseError('No raw data in %s object' % self.__class__.__name__)
 
-    def get_json_proto_header(self):
-        raise NotImplementedError('Override function')
 class EthernetFrameHeader:
     def __init__(self, src_mac: bytes, dst_mac: bytes, encapsulated_proto: int) -> None:
         self.__src_mac: bytes = src_mac
         self.__dst_mac: bytes = dst_mac
         self.__encapsulated_proto: int = encapsulated_proto
-
-    @property
-    def format_src_mac(self) -> str:
-        return NetworkProtocol.get_format_address(self.__src_mac, sep=':', function="{:02x}".format).upper()
-
-    @property
-    def format_dst_mac(self) -> str:
-        return NetworkProtocol.get_format_address(self.__dst_mac, sep=':', function="{:02x}".format).upper()
 
     @property
     def encapsulated_proto(self) -> int:
@@ -64,11 +60,6 @@ class EthernetFrameHeader:
     def destination_mac(self) -> bytes:
         return self.__dst_mac
 
-    def __str__(self) -> str:
-        result = f'DATALINK\tEthernetProtocol:\n'
-        result += f'Src MAC: {self.format_src_mac}\tDst MAC: {self.format_dst_mac}\t' \
-                  f'Eth Proto: {self.encapsulated_proto}\n'
-        return result
 class EthernetFrame(NetworkProtocol):
     def __init__(self, raw_data: bytes):
         NetworkProtocol.__init__(self, raw_data)
@@ -82,8 +73,6 @@ class EthernetFrame(NetworkProtocol):
                 return EthernetFrameHeader(src_mac, dst_mac, proto)
             except struct.error:
                 raise NetworkParseError("Incorrect Ethernet frame format")
-        else:
-            raise NetworkParseError(f"No {self.__class__.__name__} header")
 
     @property
     def header(self):
@@ -104,13 +93,7 @@ class EthernetFrame(NetworkProtocol):
     def get_encapsulated_data(self) -> bytes:
         return NetworkProtocol.get_data(self, self.__offset)
 
-    def get_proto_info(self) -> str:
-        return str(self.__header)
-
-    def get_json_proto_header(self):
-        pass
 class IPPacketHeader:
-    __level: NetworkLevel = NetworkLevel.NETWORK
     def __init__(self, ip_header: tuple):
         self.__first_byte = ip_header[0]
         self.__version = ip_header[0] >> 4
@@ -150,11 +133,7 @@ class IPPacketHeader:
         return self.__total_len
     def set_source_address(self, source_address: str):
         self.__src_addr = source_address
-    def __str__(self) -> str:
-        result = f'{self.__level.value}\tIPv4:\n'
-        result += f'TTL: {self.ttl}\tSrc: {self.source_address}\tDst: {self.destination_address}\n'
-        result += f'Checksum: {hex(self.__checksum)}\n'
-        return result
+
     def build_header(self, checksum=0) -> bytes:
         header = struct.pack('!B', self.__first_byte) +\
                  struct.pack('!BHHHBB', self.__tos, self.__total_len, self.__unique_id, self.__offset_flags, self.__ttl,
@@ -172,7 +151,6 @@ class IPPacketHeader:
 class IPPacket(NetworkProtocol):
     def __init__(self, raw_data: bytes, parent: EthernetFrameHeader = None):
         NetworkProtocol.__init__(self, raw_data)
-        self.__level: NetworkLevel = NetworkLevel.NETWORK
         self.__header = self.__parse_data()
         self.__offset = self.__header.header_length
         self.__child = None
@@ -225,11 +203,8 @@ class IPPacket(NetworkProtocol):
         self.checksum()
     def set_destination_address(self, ip_address: str) -> None:
         self.__header.set_destination_address(ip_address)
-    def get_json_proto_header(self):
-        pass
-class TCPHeader:
-    __level: NetworkLevel = NetworkLevel.TRANSPORT
 
+class TCPHeader:
     def __init__(self, header: tuple, raw_header: bytes = None):
         self.__src_port = header[0]
         self.__dst_port = header[1]
@@ -274,9 +249,7 @@ class TCPHeader:
     @property
     def checksum(self) -> int:
         return self.__check_sum
-    @property
-    def level(self):
-        return self.__level
+
     def build_header(self, checksum=0) -> bytes:
         header = struct.pack('!HHIIHH', self.__src_port, self.__dst_port, self.__sequence, self.__acknowledgment,
                              self.__offset_reserved_flags, self.__window_size) + \
@@ -290,18 +263,9 @@ class TCPHeader:
         if self.__options is not None:
             header += self.__options
         return header
-    def __str__(self) -> str:
-        result = f'{self.__level.value}\tTCP:\n'
-        result += f'Src port: {self.source_port}\tDst port: {self.destination_port}\tChecksum: {hex(self.checksum)}\n'
-        result += 'Flags:\n'
-        flags = [f'{flag}' for flag in self.__flags.keys() if self.__flags[flag] != 0]
-        for flag in flags:
-            result += f'{flag}\n'
-        return result
 class TCPPacket(NetworkProtocol):
     def __init__(self, raw_data: bytes, parent: IPPacketHeader = None):
         NetworkProtocol.__init__(self, raw_data)
-        self.__level: NetworkLevel = NetworkLevel.TRANSPORT
         self.__header = self.__parse_data()
         self.__parent: IPPacketHeader = parent
         self.__child = None
@@ -312,12 +276,9 @@ class TCPPacket(NetworkProtocol):
                 return TCPHeader(header, self.raw_data)
             except struct.error:
                 raise NetworkParseError('Incorrect TCP packet format')
-        else:
-            raise NetworkParseError('No {self.__class__.__name__} header')
+
     def set_parent(self, parent: IPPacketHeader) -> None:
         self.__parent = parent
-    def set_child(self, child) -> None:
-        self.__child = child
     @property
     def source_port(self) -> int:
         return self.__header.source_port
@@ -356,12 +317,7 @@ class TCPPacket(NetworkProtocol):
         return (~res) & 0xffff
     def get_packet(self) -> bytes:
         return self.__header.build_header(checksum=self.checksum()) + self.get_encapsulated_data()
-    def get_proto_info(self) -> str:
-        result = str(self.__parent)
-        result += str(self.header)
-        return result
-    def get_json_proto_header(self):
-        pass
+
 class UDPHeader:
     __level: NetworkLevel = NetworkLevel.TRANSPORT
     def __init__(self, header: tuple):
@@ -380,22 +336,18 @@ class UDPHeader:
     def length(self):
         return self.__length
     @property
-    def checksum(self):
-        return self.__chk_sum
-    @property
     def offset(self):
         return self.__offset
+    @property
+    def checksum(self):
+        return self.__chk_sum
     def build_header(self, checksum=0) -> bytes:
         header = struct.pack('!HHH', self.source_port, self.destination_port, self.length) + struct.pack('H', checksum)
         return header
-    def __str__(self) -> str:
-        result = f'{self.__level.value}\tUDP:\n'
-        result += f'Src Port: {self.source_port}\tDst Port: {self.destination_port}\tChecksum: {hex(self.checksum)}\n'
-        return result
+
 class UDPPacket(NetworkProtocol):
     def __init__(self, raw_data: bytes, parent: IPPacketHeader = None):
         NetworkProtocol.__init__(self, raw_data)
-        self.__level: NetworkLevel = NetworkLevel.TRANSPORT
         self.__header = self.__parse()
         self.__parent: IPPacketHeader = parent
     def __parse(self) -> UDPHeader:
@@ -405,8 +357,6 @@ class UDPPacket(NetworkProtocol):
                 return UDPHeader(header)
             except struct.error:
                 raise NetworkParseError('Incorrect UDP packet format')
-        else:
-            raise NetworkParseError(f'No {self.__class__.__name__} header')
     @property
     def header(self) -> UDPHeader:
         return self.__header
@@ -446,14 +396,8 @@ class UDPPacket(NetworkProtocol):
         return self.__header.build_header(checksum=self.checksum()) + self.get_encapsulated_data()
     def get_encapsulated_data(self) -> bytes:
         return NetworkProtocol.get_data(self, self.__header.offset)
-    def get_proto_info(self) -> str:
-        result = str(self.__parent)
-        result += str(self.__header)
-        return result
-    def get_json_proto_header(self):
-        pass
+
 class ICMPHeader:
-    __level = NetworkLevel.NETWORK
     def __init__(self, header: tuple, raw_header: bytes):
         self.__type = header[0]
         self.__code = header[1]
@@ -461,12 +405,6 @@ class ICMPHeader:
         self.__add_info = header[3]
         self.__offset = 8
         self.__other_data = raw_header[self.__offset:]
-    @property
-    def type(self) -> int:
-        return self.__type
-    @property
-    def code(self) -> int:
-        return self.__code
     @property
     def checksum(self) -> int:
         return self.__checksum
@@ -482,23 +420,11 @@ class ICMPHeader:
     def build_header(self, checksum=0) -> bytes:
         return struct.pack('!BB', self.__type, self.__code) + struct.pack('H', checksum) + \
             struct.pack('!I', self.__add_info)
-    def __str__(self) -> str:
-        result = f'{self.__level.value}\tICMP:\n'
-        result += f'Type: {self.__type}\tCode: {self.__code}\tChecksum: {hex(self.__checksum)}\n'
-        result += f'Data: {self.__other_data}\n'
-        return result
-class ICMPData:
-    def __init__(self, raw_data: bytes, header: ICMPHeader):
-        self.__raw_data = raw_data
-        self.__header = header
-    @property
-    def encapsulate_data(self) -> bytes:
-        if self.__header.type == 8 or self.__header.type == 0:
-            return self.__raw_data
+
+
 class ICMPPacket(NetworkProtocol):
     def __init__(self, raw_data: bytes, parent: IPPacketHeader):
         NetworkProtocol.__init__(self, raw_data)
-        self.__level: NetworkLevel = NetworkLevel.NETWORK
         self.__header = self.__parse_data()
         self.__encapsulated_data = self.__header.encapsulated_data
         self.__parent: IPPacketHeader = parent
@@ -509,11 +435,6 @@ class ICMPPacket(NetworkProtocol):
                 return ICMPHeader(header, self.raw_data)
             except struct.error:
                 raise NetworkParseError('Incorrect TCP packet format')
-        else:
-            raise NetworkParseError('No {self.__class__.__name__} header')
-    @property
-    def level(self) -> NetworkLevel:
-        return self.__level
     @property
     def header(self) -> ICMPHeader:
         return self.__header
@@ -529,12 +450,8 @@ class ICMPPacket(NetworkProtocol):
         return (~res) & 0xffff
     def get_packet(self):
         return self.__header.build_header(checksum=self.checksum()) + self.__encapsulated_data
-    def get_proto_info(self) -> str:
-        result = str(self.__parent)
-        result += str(self.__header)
-        return result
-    def get_json_proto_header(self):
-        pass
+
+
 class ProtocolType(Enum):
     IP = 8
     ICMP = 1
@@ -638,12 +555,8 @@ class NetworkFilter:
         if self.params.get('ARP') is None and net_level_proto == ProtocolType.ARP.value:
             return False
         elif net_level_proto == ProtocolType.IP.value:
-            if self.params.get('is_router') is None or self.params.get('is_router') is False:
-                destination_ip = self.params.get('target_ip')
-                source_ip = self.params.get('listen_ip')
-            else:
-                destination_ip = self.params.get('listen_ip')
-                source_ip = self.params.get('target_ip')
+            destination_ip = self.params.get('target_ip')
+            source_ip = self.params.get('listen_ip')
 
             ip_packet = IPPacket(ethernet.get_encapsulated_data(), ethernet.header)
             if ip_packet.destination_address == destination_ip and ip_packet.source_address == source_ip:
@@ -665,7 +578,8 @@ def timeout(timeout):
             return result
         return wrapper
     return decorator
-@timeout(0.5)
+
+
 def handle_net_packet(sniffer, sender, net_filter):
     while True:
         raw_net_data = sniffer.recvfrom(65535)[0]
@@ -679,17 +593,88 @@ def handle_net_packet(sniffer, sender, net_filter):
             break
 
 
+class Route:
+    def __init__(self, nodes: list):
+        self.nodes = nodes
+        self.__destination = ''
+
+        if len(self.nodes) == 0:
+            raise RouteError('Route does not contain any node')
+
+    def set_destination(self, ip_addr: str):
+        self.__destination = ip_addr
+
+    def shuffle(self) -> None:
+        random.shuffle(self.nodes)
+
+    def __str__(self) -> str:
+        return '-'.join(self.nodes)
+
+    @property
+    def route(self) -> str:
+        self.shuffle()
+        return str(self)
+
+    @staticmethod
+    def get_route_list(route: str) -> list[str]:
+        return route.split('-')
+
+    def get_next_node(self):
+        try:
+            return self.nodes.pop(0)
+        except IndexError:
+            return None
+
+    @property
+    def last_node(self):
+        return self.nodes[-1]
+
+    @property
+    def destination(self) -> str:
+        return self.__destination
+
+    @property
+    def route_length(self):
+        return len(self.nodes)
+
+    @property
+    def next_addr(self):
+        return self.nodes[0]
+
+
 def main():
-    net_filter = NetworkFilter({'target_ip': '192.168.25.128', 'listen_ip': '192.168.25.1'})
-    sender = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
-    sniffer = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.htons(0x0003))
+    #  1) Check route destination:
+    #  2) If this is intermediate node => create post request to next node
+    #  3) Else => send raw packet and listen answer from target
 
-    sender.sendto(raw_packet, ('192.168.25.1', 0))
+    route = Route(Route.get_route_list(packet_route))
+    current_node = route.get_next_node()
+    if route.route_length == 0:
+        net_filter = NetworkFilter({'target_ip': current_node, 'listen_ip': target})
+        sender = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
+        sniffer = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.htons(0x0003))
 
-    try:
-        handle_net_packet(sniffer, sender, net_filter)
-    except TimeoutError:
-        print('Pass packet')
+        sender.sendto(raw_packet, (target, 0))
+
+        try:
+            handle_net_packet(sniffer, sender, net_filter)
+        except TimeoutError:
+            print('Pass packet')
+    else:
+        encoded_packet = base64.b64encode(raw_packet).decode()
+        data = urllib.parse.urlencode({
+            "script": base64.b64encode(gzip.compress(script_code.encode())).decode(),
+            "raw_packet": encoded_packet,
+            "packet_route": route.route,
+            "target": target
+        }).encode()
+
+        req = urllib.request.Request(f'http://{route.next_addr}:8000', data=data)
+
+        try:
+            resp = urllib.request.urlopen(req, timeout=1)
+        except TimeoutError:
+            print('Error request')
 
 
 main()

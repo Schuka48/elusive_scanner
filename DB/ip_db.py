@@ -7,7 +7,9 @@ class IPDatabase:
         self.conn = psycopg2.connect(
             dbname='postgres',
             user=os.environ.get('PG_USER'),
-            password=os.environ.get('PG_PASSWD'),
+            # user='postgres',
+            password=os.environ.get('PG_USER'),
+            # password='postgres',
             host='localhost',
             port=5432
         )
@@ -31,9 +33,15 @@ class IPDatabase:
         self.conn.commit()
 
     def get_ips(self):
-        self.cur.execute("SELECT * FROM ips")
+        self.cur.execute("SELECT address FROM ips;")
         return self.cur.fetchall()
 
     def __del__(self):
         self.cur.close()
         self.conn.close()
+
+
+if __name__ == '__main__':
+    db_conn = IPDatabase()
+    # db_conn.delete_ip_address('192.168.25.1')
+    print(db_conn.get_ips())

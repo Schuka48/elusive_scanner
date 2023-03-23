@@ -1,8 +1,6 @@
 import signal
 
 
-
-
 def timeout(timeout):
     def decorator(func):
         def wrapper(*args, **kwargs):
